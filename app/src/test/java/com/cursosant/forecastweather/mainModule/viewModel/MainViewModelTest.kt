@@ -26,10 +26,13 @@ import retrofit2.converter.gson.GsonConverterFactory
  * https://www.udemy.com/user/alain-nicolas-tello/
  * Web: www.alainnicolastello.com
  */
-class MainViewModelTest{
+class MainViewModelTest {
     @get:Rule
     val instantExecutorRule = InstantTaskExecutorRule()
-    /*@ExperimentalCoroutinesApi
+
+    /*
+    TODO Este metodo quedo obsoleto por lo que ahora se actualizo a --> MainDispatcherRule
+    @ExperimentalCoroutinesApi
     @get:Rule
     val mainCoroutinesRule = MainCoroutineRule()*/
     @get:Rule
@@ -38,12 +41,12 @@ class MainViewModelTest{
     private lateinit var mainViewModel: MainViewModel
     private lateinit var service: WeatherForecastService
 
-    companion object{
+    companion object {
         private lateinit var retrofit: Retrofit
 
         @BeforeClass
         @JvmStatic
-        fun setupCommon(){
+        fun setupCommon() {
             retrofit = Retrofit.Builder()
                 .baseUrl("https://api.openweathermap.org/")
                 .addConverterFactory(GsonConverterFactory.create())
@@ -52,40 +55,53 @@ class MainViewModelTest{
     }
 
     @Before
-    fun setup(){
+    fun setup() {
         mainViewModel = MainViewModel()
         service = retrofit.create(WeatherForecastService::class.java)
     }
 
     @Test
-    fun checkCurrentWeatherIsNotNullTest() = runTest{
-        val result = service.getWeatherForecastByCoordinates(19.4342, -99.1962,
-            "6a5c325c9265883997730d09be2328e8", "metric", "en")
+    fun checkCurrentWeatherIsNotNullTest() = runTest {
+        val result = service.getWeatherForecastByCoordinates(
+            19.4342, -99.1962,
+            "6a5c325c9265883997730d09be2328e8", "metric", "en"
+        )
         assertThat(result.current, `is`(notNullValue()))
     }
 
     @Test
-    fun checkTimezoneReturnsMexicoCityTest() = runTest{
-        val result = service.getWeatherForecastByCoordinates(19.4342, -99.1962,
-            "6a5c325c9265883997730d09be2328e8", "metric", "en")
+    fun checkTimezoneReturnsMexicoCityTest() = runTest {
+        val result = service.getWeatherForecastByCoordinates(
+            19.4342, -99.1962,
+            "6a5c325c9265883997730d09be2328e8", "metric", "en"
+        )
         assertThat(result.timezone, `is`("America/Mexico_City"))
     }
 
     @Test
-    fun checkErrorResponseWithOnlyCoordinatesTes() = runTest{
+    fun checkErrorResponseWithOnlyCoordinatesTes() = runTest {
         try {
-            service.getWeatherForecastByCoordinates(19.4342, -99.1962,
-                "", "", "")
+            service.getWeatherForecastByCoordinates(
+                19.4342, -99.1962,
+                "", "", ""
+            )
         } catch (e: Exception) {
             assertThat(e.localizedMessage, `is`("HTTP 401 Unauthorized"))
         }
     }
 
+
+    //Todo con runTest funcionaria la parte de mainDispatcherRule y runBlocking queda obsoleto
     @Test
-    fun checkHourlySizeTest() = runTest{
-        mainViewModel.getWeatherAndForecast(19.4342, -99.1962,
-            "6a5c325c9265883997730d09be2328e8", "metric", "en")
+    fun checkHourlySizeTest() = runTest {
+        mainViewModel.getWeatherAndForecast(
+            19.4342, -99.1962,
+            "6a5c325c9265883997730d09be2328e8", "metric", "en"
+        )
+
+//       TODO  Sustituye  a lo que antes haciamos de observar el LiveData
         val result = mainViewModel.getResult().getOrAwaitValue()
+        //TODO necesitamos de una RuleDispatchers
         assertThat(result.hourly.size, `is`(48))
     }
     /*@Test
@@ -99,11 +115,14 @@ class MainViewModelTest{
     }*/
 
     @Test
-    fun checkHourlySizeRemoteWithLocalTest() = runTest{
-        val remoteResult = service.getWeatherForecastByCoordinates(19.4342, -99.1962,
-            "6a5c325c9265883997730d09be2328e8", "metric", "en")
+    fun checkHourlySizeRemoteWithLocalTest() = runTest {
+        val remoteResult = service.getWeatherForecastByCoordinates(
+            19.4342, -99.1962,
+            "6a5c325c9265883997730d09be2328e8", "metric", "en"
+        )
 
-        val localResult = JSONFileLoader().loadWeatherForecastEntity("weather_forecast_response_success")
+        val localResult =
+            JSONFileLoader().loadWeatherForecastEntity("weather_forecast_response_success")
 
         assertThat(localResult?.hourly?.size, `is`(remoteResult.hourly.size))
         assertThat(localResult?.timezone, `is`(remoteResult.timezone))
